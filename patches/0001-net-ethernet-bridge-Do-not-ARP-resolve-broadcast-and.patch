@@ -1,0 +1,59 @@
+From c677456849cb2ecd80ce0e1eea0ac114f056c64b Mon Sep 17 00:00:00 2001
+From: Mario Paja <mariopaja@hotmail.com>
+Date: Mon, 2 Nov 2026 16:49:27 +0100
+Subject: [PATCH] net: ethernet: bridge: Do not ARP resolve broadcast and
+ multicast
+
+commit c526409cc605 ("net: ethernet: bridge: Resolve IPv4 dst before
+flooding") resolves the destination of locally originated IPv4 packets
+with net_arp_prepare() before they are flooded to the bridge ports.
+Broadcast and multicast destinations are not resolved by ARP, and
+net_arp_prepare() fails for them unless they match the interface
+netmask and gateway; a DHCP DISCOVER to 255.255.255.255 from a bridge
+interface without an address is dropped with "ARP prepare failed
+(-22)", so DHCPv4 on the bridge never completes.
+
+Pass broadcast and multicast IPv4 packets through unresolved, as the
+Ethernet L2 does.
+
+Tested on a MikroE UNI Clicker (STM32F429) bridging USB CDC NCM and a
+LAN865x 10BASE-T1S interface: the bridge interface obtains a DHCPv4
+lease through the bridged USB port.
+
+Signed-off-by: Mario Paja <mariopaja@hotmail.com>
+---
+ subsys/net/l2/ethernet/bridge/bridge.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/subsys/net/l2/ethernet/bridge/bridge.c b/subsys/net/l2/ethernet/bridge/bridge.c
+index f9be4253b14..3596dd4a3f5 100644
+--- a/subsys/net/l2/ethernet/bridge/bridge.c
++++ b/subsys/net/l2/ethernet/bridge/bridge.c
+@@ -507,8 +507,7 @@ static struct net_pkt *bridge_resolve_local_dst(struct net_if *bridge, struct ne
+ 	/* Only locally originated IPv4 packets need resolving here. Forwarded
+ 	 * (L2 bridged) frames already carry a complete Ethernet header, ARP
+ 	 * frames drive their own destination, and packets whose destination is
+-	 * already known (broadcast/multicast or a cached neighbor) have a
+-	 * non-zero link address.
++	 * already known (a cached neighbor) have a non-zero link address.
+ 	 */
+ 	if (net_pkt_is_l2_bridged(pkt) ||
+ 	    net_pkt_ll_proto_type(pkt) != NET_ETH_PTYPE_IP ||
+@@ -516,6 +515,14 @@ static struct net_pkt *bridge_resolve_local_dst(struct net_if *bridge, struct ne
+ 		return pkt;
+ 	}
+ 
++	/* Broadcast and multicast destinations are not resolved by ARP, as in
++	 * the Ethernet L2 (a DHCP DISCOVER to 255.255.255.255, for example).
++	 */
++	if (net_ipv4_is_addr_bcast_raw(bridge, NET_IPV4_HDR(pkt)->dst) ||
++	    net_ipv4_is_addr_mcast_raw(NET_IPV4_HDR(pkt)->dst)) {
++		return pkt;
++	}
++
+ 	ret = net_arp_prepare(pkt, (struct net_in_addr *)NET_IPV4_HDR(pkt)->dst,
+ 			      NULL, &arp_pkt);
+ 	switch (ret) {
+-- 
+2.43.0
+

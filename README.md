@@ -22,8 +22,13 @@ LAN <--Wi-Fi--> host <--USB CDC NCM--> UNI Clicker <--10BASE-T1S--> T1S nodes
 
 - The `mikroe_uni_clicker` board, not yet in upstream Zephyr.
 - An Ethernet bridge fix in `subsys/net/l2/ethernet/bridge/bridge.c`: since
-  commit c526409cc60, broadcast and multicast IPv4 frames sent from the
+  commit c526409cc605, broadcast and multicast IPv4 frames sent from the
   bridge interface are dropped (ARP lookup fails), so DHCP never completes.
+  The fix is in `patches/`; apply it to the Zephyr tree:
+
+  ```
+  git -C $ZEPHYR_BASE am $PWD/patches/0001-net-ethernet-bridge-Do-not-ARP-resolve-broadcast-and.patch
+  ```
 
 ## Build and flash
 
