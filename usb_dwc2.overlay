@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) 2026 Mario Paja
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Use the generic DWC2 USB device driver for the STM32F429 OTG_FS controller
+ * instead of the STM32 HAL based driver (udc_stm32). The GHWCFG values were
+ * read from an STM32F429NI (GSNPSID 0x4F54281A): EP0 and three device
+ * endpoints, dedicated TX FIFOs. FIFO sizes are in 32-bit words and fit the
+ * 1.25 KB (320 words) OTG_FS FIFO RAM.
+ *
+ * Build with -DEXTRA_DTC_OVERLAY_FILE=usb_dwc2.overlay
+ */
+
+#include <zephyr/dt-bindings/clock/stm32f4_clock.h>
+
+/*
+ * The board's CDC ACM console node lives under the deleted controller;
+ * this application uses RTT instead.
+ */
+/ {
+	chosen {
+		/delete-property/ zephyr,console;
+		/delete-property/ zephyr,shell-uart;
+		/delete-property/ zephyr,uart-mcumgr;
+		/delete-property/ zephyr,bt-mon-uart;
+		/delete-property/ zephyr,bt-c2h-uart;
+	};
+};
+
+/delete-node/ &zephyr_udc0;
+
+/ {
+	soc {
+		dwc2_fsotg0: usb@50000000 {
+			compatible = "st,stm32f4-fsotg", "snps,dwc2";
+			reg = <0x50000000 0x40000>;
+			interrupts = <67 0>;
+			interrupt-names = "fsotg";
+			clocks = <&rcc STM32_CLOCK_BUS_AHB2 0x00000080>,
+				 <&rcc STM32_SRC_PLL_Q NO_SEL>;
+			num-out-eps = <4>;
+			num-in-eps = <4>;
+			ghwcfg1 = <0x00000000>;
+			ghwcfg2 = <0x229dcd20>;
+			ghwcfg4 = <0x0ff08030>;
+			g-rx-fifo-size = <128>;
+			g-np-tx-fifo-size = <16>;
+			g-tx-fifo-size = <48 48 48>;
+			status = "disabled";
+		};
+	};
+};
+
+zephyr_udc0: &dwc2_fsotg0 {
+	pinctrl-0 = <&usb_otg_fs_dm_pa11 &usb_otg_fs_dp_pa12>;
+	pinctrl-names = "default";
+	status = "okay";
+};

@@ -1,0 +1,19 @@
+# Copyright (c) 2026 Mario Paja
+# SPDX-License-Identifier: Apache-2.0
+#
+# Proxy ARP and DHCP relay for the UNI Clicker; follows the USB interface
+# across board resets, reflashing and replugging.
+
+[Unit]
+Description=Proxy ARP and DHCP relay for the UNI Clicker 10BASE-T1S bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/sbin/t1s-lan-proxy.sh run
+ExecStopPost=-/usr/local/sbin/t1s-lan-proxy.sh down
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

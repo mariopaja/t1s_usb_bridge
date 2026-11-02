@@ -1,0 +1,52 @@
+/*
+ * Copyright (c) 2026 Mario Paja
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * USB CDC NCM network interface, and a MikroE Two-Wire ETH Click (LAN865x)
+ * on mikroBUS 4 as the 10BASE-T1S PLCA coordinator (node 0).
+ */
+
+#include <zephyr/dt-bindings/gpio/mikro-bus.h>
+
+/ {
+	cdc_ncm_eth0: cdc_ncm_eth0 {
+		compatible = "zephyr,cdc-ncm-ethernet";
+		remote-mac-address = "00005E005301";
+	};
+};
+
+/* mikroBUS 4: SPI4 */
+&mikrobus_4_spi {
+	status = "okay";
+
+	t1s_eth: lan865x@0 {
+		compatible = "microchip,lan865x";
+		reg = <0>;
+		spi-max-frequency = <20000000>;
+		spi-cs-setup-delay-ns = <1000>;
+		int-gpios = <&mikrobus_4_header MIKROBUS_INT GPIO_ACTIVE_LOW>;
+		rst-gpios = <&mikrobus_4_header MIKROBUS_RST GPIO_ACTIVE_LOW>;
+		phy-handle = <&t1s_phy>;
+		zephyr,random-mac-address;
+		status = "okay";
+
+		t1s_mdio: lan865x_mdio {
+			compatible = "microchip,lan865x-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			t1s_phy: ethernet-phy@0 {
+				compatible = "microchip,t1s-phy";
+				reg = <0x0>;
+				plca-enable;
+				plca-node-id = <0>;
+				plca-node-count = <8>;
+				plca-burst-count = <0x0>;
+				plca-burst-timer = <0x80>;
+				plca-to-timer = <0x20>;
+				status = "okay";
+			};
+		};
+	};
+};

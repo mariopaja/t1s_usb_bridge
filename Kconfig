@@ -1,0 +1,30 @@
+# Copyright (c) 2026 Mario Paja
+# SPDX-License-Identifier: Apache-2.0
+
+# USB device descriptor options (SAMPLE_USBD_*) of the shared USB sample code
+source "samples/subsys/usb/common/Kconfig.sample_usbd"
+
+menu "T1S USB bridge"
+
+config T1S_BRIDGE_IPV4_ADDR
+	string "Static IPv4 address of the bridge"
+	default ""
+	help
+	  Management address of the bridge interface. Leave empty to take an
+	  address by DHCPv4. Devices on the 10BASE-T1S segment are not
+	  affected: they still use DHCP through the bridge.
+
+config T1S_BRIDGE_STATIC_IPV4
+	def_bool T1S_BRIDGE_IPV4_ADDR != ""
+
+config T1S_BRIDGE_IPV4_NETMASK
+	string "IPv4 netmask of the bridge"
+	default "255.255.255.0"
+
+config T1S_BRIDGE_IPV4_GW
+	string "IPv4 gateway of the bridge"
+	default ""
+
+endmenu
+
+source "Kconfig.zephyr"
